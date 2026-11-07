@@ -411,6 +411,13 @@ class BluetoothConnectionManager(context: Context) {
     }
 
     /**
+     * Simula el retiro de la tarjeta RFID en el simulador
+     */
+    fun simulateCardRemove() {
+        parseIncomingTelemetry("SENS:RFID:REMOVED")
+    }
+
+    /**
      * Simula la pulsación de una tecla en el simulador
      */
     fun simulateKeypress(char: Char) {

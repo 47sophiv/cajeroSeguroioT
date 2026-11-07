@@ -295,6 +295,12 @@ fun SensorReadingScreen(btManager: BluetoothConnectionManager) {
             }
         }
 
+        // Panel de simulación interactiva si está en Modo Simulación
+        if (status == ConnectionStatus.CONNECTED_SIMULATOR) {
+            Spacer(modifier = Modifier.height(16.dp))
+            SimulatorHardwareCard(btManager)
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
 
         // 5. Filtro de Registro con EditText y RadioButtons (Criterio 2.1.1.2)

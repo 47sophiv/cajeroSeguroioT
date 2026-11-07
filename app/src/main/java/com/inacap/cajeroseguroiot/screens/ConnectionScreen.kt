@@ -6,8 +6,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -32,6 +34,7 @@ fun ConnectionScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
         // Tarjeta de Estado de Conexión
@@ -127,6 +130,12 @@ fun ConnectionScreen(
             }
         }
 
+        // Si está en Modo Simulación, mostrar panel interactivo para insertar tarjeta y usar teclado
+        if (status == ConnectionStatus.CONNECTED_SIMULATOR) {
+            Spacer(modifier = Modifier.height(16.dp))
+            SimulatorHardwareCard(btManager)
+        }
+
         Spacer(modifier = Modifier.height(20.dp))
 
         // Sección de dispositivos vinculados (HC-05 / HC-06)
@@ -169,11 +178,11 @@ fun ConnectionScreen(
                 }
             }
         } else {
-            LazyColumn(
+            Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(btManager.pairedDevices) { device ->
+                btManager.pairedDevices.forEach { device ->
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
