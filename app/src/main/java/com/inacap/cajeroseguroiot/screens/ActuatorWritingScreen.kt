@@ -11,19 +11,39 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.inacap.cajeroseguroiot.bluetooth.BluetoothConnectionManager
 import com.inacap.cajeroseguroiot.ui.theme.*
 
+/**
+ * Pantalla de Activador (Criterio 2.1.1.2 - 10 puntos)
+ * Aplica principios de Material Design e integra elementos interactivos:
+ * - Slider: Control manual analógico del servomotor SG90 (0° a 180°).
+ * - RadioButtons: Selección de posiciones predefinidas de la compuerta.
+ * - Switch: Interruptor de Bloqueo de Emergencia en tiempo real.
+ * - EditTexts (OutlinedTextField): Monto a retirar y envío de comandos seriales personalizados.
+ */
 @Composable
 fun ActuatorWritingScreen(btManager: BluetoothConnectionManager) {
-    val servoAngle = btManager.servoAngle.value
+    val servoAngle = btManager.servoAngle.intValue
     val isLocked = btManager.isAtmLocked.value
+
     var withdrawAmount by remember { mutableStateOf("50000") }
+    var customCommandText by remember { mutableStateOf("") }
+    var sliderValue by remember { mutableFloatStateOf(servoAngle.toFloat()) }
+    var selectedPresetRadio by remember { mutableStateOf("90") }
+
+    // Sincronizar el slider si el ángulo cambia externamente
+    LaunchedEffect(servoAngle) {
+        sliderValue = servoAngle.toFloat()
+        selectedPresetRadio = when (servoAngle) {
+            0 -> "0"
+            180 -> "180"
+            else -> "90"
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -33,20 +53,66 @@ fun ActuatorWritingScreen(btManager: BluetoothConnectionManager) {
     ) {
         // Título de la pantalla
         Text(
-            text = "Control de Actuadores (Escritura Inalámbrica)",
+            text = "Pantalla de Activador (Control Remoto)",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground
         )
         Text(
-            text = "Transmisión de comandos inalámbricos hacia servomotor SG90 y periféricos (Criterio 1.1.4.6 y 2.1.2)",
+            text = "Envío de datos hacia actuadores IoT mediante elementos interactivos (Criterio 2.1.1.2)",
             style = MaterialTheme.typography.bodyMedium,
             color = TextSecondary
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Tarjeta de Estado del Servomotor SG90
+        // 1. Interruptor Switch de Bloqueo de Emergencia (Criterio 2.1.1.2)
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = if (isLocked) BankAlert.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface
+            )
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Interruptor de Bloqueo de Emergencia",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isLocked) BankAlert else MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = if (isLocked) "SISTEMA BLOQUEADO (Acceso denegado)" else "Sistema operativo normal",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
+                }
+
+                // Switch interactivo
+                Switch(
+                    checked = isLocked,
+                    onCheckedChange = { activateLock ->
+                        if (activateLock) {
+                            btManager.sendActuatorCommand("LOCK_SYSTEM")
+                        } else {
+                            btManager.sendActuatorCommand("RESET_SYSTEM")
+                        }
+                    },
+                    colors = SwitchDefaults.colors(checkedThumbColor = BankAlert)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 2. Control del Servomotor SG90 con Slider y RadioButtons (Criterio 2.1.1.2)
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
@@ -65,8 +131,8 @@ fun ActuatorWritingScreen(btManager: BluetoothConnectionManager) {
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "Actuador PWM en Pin 8 de Arduino",
-                            style = MaterialTheme.typography.bodyMedium,
+                            text = "Actuador de compuerta en Pin 8 de Arduino",
+                            style = MaterialTheme.typography.bodySmall,
                             color = TextSecondary
                         )
                     }
@@ -86,45 +152,86 @@ fun ActuatorWritingScreen(btManager: BluetoothConnectionManager) {
                             color = posColor,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                            style = MaterialTheme.typography.labelLarge
+                            style = MaterialTheme.typography.labelMedium
                         )
                     }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Barra de visualización de ángulo de giro
+                // Deslizador interactivo Slider (Criterio 2.1.1.2)
                 Text(
-                    text = "Ángulo actual de rotación: $servoAngle°",
-                    style = MaterialTheme.typography.bodyLarge,
+                    text = "Control Analógico mediante Slider: ${sliderValue.toInt()}°",
+                    style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold
                 )
-                Spacer(modifier = Modifier.height(6.dp))
 
-                LinearProgressIndicator(
-                    progress = { servoAngle.toFloat() / 180f },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(10.dp)
-                        .clip(RoundedCornerShape(5.dp)),
-                    color = when (servoAngle) {
-                        180 -> BankSuccess
-                        0 -> BankAlert
-                        else -> BankPrimary
+                Slider(
+                    value = sliderValue,
+                    onValueChange = { newValue ->
+                        sliderValue = newValue
+                        btManager.setCustomServoAngle(newValue.toInt())
                     },
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                    valueRange = 0f..180f,
+                    steps = 17, // Pasos cada 10 grados
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = SliderDefaults.colors(
+                        thumbColor = BankPrimary,
+                        activeTrackColor = BankPrimary
+                    )
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Botones de control manual del actuador
-                Text(
-                    text = "Comandos Inalámbricos de Servo:",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = TextSecondary
-                )
                 Spacer(modifier = Modifier.height(8.dp))
 
+                // Selección mediante RadioButtons (Criterio 2.1.1.2)
+                Text(
+                    text = "Posiciones Predefinidas (RadioButtons):",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = TextSecondary
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(
+                            selected = selectedPresetRadio == "0",
+                            onClick = {
+                                selectedPresetRadio = "0"
+                                btManager.sendActuatorCommand("SERVO_ALERT")
+                            }
+                        )
+                        Text("0° Alerta", style = MaterialTheme.typography.bodySmall)
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(
+                            selected = selectedPresetRadio == "90",
+                            onClick = {
+                                selectedPresetRadio = "90"
+                                btManager.sendActuatorCommand("SERVO_IDLE")
+                            }
+                        )
+                        Text("90° Reposo", style = MaterialTheme.typography.bodySmall)
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(
+                            selected = selectedPresetRadio == "180",
+                            onClick = {
+                                selectedPresetRadio = "180"
+                                btManager.sendActuatorCommand("SERVO_OPEN")
+                            }
+                        )
+                        Text("180° Dispensar", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Botones directos de activación
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -161,7 +268,7 @@ fun ActuatorWritingScreen(btManager: BluetoothConnectionManager) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Tarjeta de Retiro Móvil sin Tarjeta Física (Funcionalidad Avanzada de la App)
+        // 3. Retiro Móvil con EditText interactivo (Criterio 2.1.1.2)
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
@@ -174,19 +281,21 @@ fun ActuatorWritingScreen(btManager: BluetoothConnectionManager) {
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Autoriza la apertura remota de la compuerta dispensadora tras validación de credenciales bancarias móviles.",
+                    text = "Autoriza la apertura de la compuerta tras validación móvil.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextSecondary
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
 
+                // EditText interactivo para monto
                 OutlinedTextField(
                     value = withdrawAmount,
                     onValueChange = { withdrawAmount = it },
                     label = { Text("Monto a Retirar ($ CLP)") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
+                    shape = RoundedCornerShape(8.dp)
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -208,7 +317,7 @@ fun ActuatorWritingScreen(btManager: BluetoothConnectionManager) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Tarjeta de Controles de Emergencia y Mantenimiento
+        // 4. Envío de Comandos Seriales Personalizados (EditText adicional)
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
@@ -216,39 +325,41 @@ fun ActuatorWritingScreen(btManager: BluetoothConnectionManager) {
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = "Control Remoto de Seguridad y Bloqueo",
+                    text = "Consola de Comandos hacia Arduino",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Envía tramas prioritarias de bloqueo ante intrusiones o reinicio administrativo.",
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = "Permite enviar órdenes personalizadas al microcontrolador.",
+                    style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary
                 )
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
-                Row(
+                OutlinedTextField(
+                    value = customCommandText,
+                    onValueChange = { customCommandText = it },
+                    label = { Text("Comando (Ej: CMD:SERVO_OPEN)") },
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Button(
-                        onClick = { btManager.sendActuatorCommand("LOCK_SYSTEM") },
-                        colors = ButtonDefaults.buttonColors(containerColor = BankAlert),
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text("Bloqueo Inmediato")
-                    }
+                    singleLine = true,
+                    shape = RoundedCornerShape(8.dp)
+                )
 
-                    Button(
-                        onClick = { btManager.sendActuatorCommand("RESET_SYSTEM") },
-                        colors = ButtonDefaults.buttonColors(containerColor = BankPrimary),
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text("Reinicio Seguro")
-                    }
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Button(
+                    onClick = {
+                        if (customCommandText.isNotBlank()) {
+                            btManager.sendActuatorCommand(customCommandText.trim())
+                            customCommandText = ""
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = BankPrimary),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("Transmitir Comando Inalámbrico")
                 }
             }
         }

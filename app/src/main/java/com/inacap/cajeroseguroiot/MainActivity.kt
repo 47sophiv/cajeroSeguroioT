@@ -12,12 +12,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.inacap.cajeroseguroiot.bluetooth.BluetoothConnectionManager
-import com.inacap.cajeroseguroiot.screens.ActuatorWritingScreen
-import com.inacap.cajeroseguroiot.screens.ConnectionScreen
-import com.inacap.cajeroseguroiot.screens.SecurityIsoScreen
-import com.inacap.cajeroseguroiot.screens.SensorReadingScreen
+import com.inacap.cajeroseguroiot.screens.*
 import com.inacap.cajeroseguroiot.ui.theme.CajeroSeguroTheme
 
 class MainActivity : ComponentActivity() {
@@ -49,10 +48,30 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    AppMainLayout(
-                        btManager = btManager,
-                        onRequestPermissions = { checkAndRequestPermissions() }
-                    )
+                    var isLoggedIn by remember { mutableStateOf(false) }
+                    var loggedUser by remember { mutableStateOf("Sophia Caro") }
+
+                    if (!isLoggedIn) {
+                        // Pantalla de Login obligatoria (Criterio 2.1.1.1 - 10 puntos)
+                        LoginScreen(
+                            btManager = btManager,
+                            onLoginSuccess = { user, role ->
+                                loggedUser = user
+                                isLoggedIn = true
+                            }
+                        )
+                    } else {
+                        // Aplicación principal con pestañas (Criterios 2.1.1.2, 2.1.2, 2.1.3, 2.1.4)
+                        AppMainLayout(
+                            btManager = btManager,
+                            currentUser = loggedUser,
+                            onRequestPermissions = { checkAndRequestPermissions() },
+                            onLogout = {
+                                isLoggedIn = false
+                                btManager.disconnect()
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -92,19 +111,37 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun AppMainLayout(
     btManager: BluetoothConnectionManager,
-    onRequestPermissions: () -> Unit
+    currentUser: String,
+    onRequestPermissions: () -> Unit,
+    onLogout: () -> Unit
 ) {
     var selectedTabIndex by remember { mutableIntStateOf(0) }
-    val tabTitles = listOf("Conexión", "Sensores", "Actuadores", "Seguridad")
+    val tabTitles = listOf("Conexión", "Monitoreo", "Activador", "Interconexión", "Seguridad")
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = "Cajero Seguro IoT - HC-05",
-                        style = MaterialTheme.typography.titleLarge
-                    )
+                    Column {
+                        Text(
+                            text = "Cajero Seguro IoT",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            text = "Usuario: $currentUser (${btManager.currentRole.value})",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                },
+                actions = {
+                    TextButton(onClick = onLogout) {
+                        Text(
+                            text = "Salir",
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 14.sp
+                        )
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
@@ -118,8 +155,11 @@ fun AppMainLayout(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // Pestañas de navegación
-            PrimaryTabRow(selectedTabIndex = selectedTabIndex) {
+            // Pestañas de navegación con scroll horizontal para soportar 5 pestañas completas
+            PrimaryScrollableTabRow(
+                selectedTabIndex = selectedTabIndex,
+                edgePadding = 8.dp
+            ) {
                 tabTitles.forEachIndexed { index, title ->
                     Tab(
                         selected = selectedTabIndex == index,
@@ -134,7 +174,8 @@ fun AppMainLayout(
                     0 -> ConnectionScreen(btManager, onRequestPermissions)
                     1 -> SensorReadingScreen(btManager)
                     2 -> ActuatorWritingScreen(btManager)
-                    3 -> SecurityIsoScreen()
+                    3 -> InterconnectionScreen(btManager)
+                    4 -> SecurityIsoScreen()
                 }
             }
         }

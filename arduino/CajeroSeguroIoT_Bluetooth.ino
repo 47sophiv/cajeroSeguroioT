@@ -252,6 +252,22 @@ void ejecutarOrdenBluetooth(String trama) {
     BTSerial.println(F("SENS:SERVO:STATE:90"));
     mostrarInicio();
   }
+  // Orden: Ajuste de ángulo libre mediante Slider (Criterio 2.1.1.2)
+  else if (cmd.startsWith("SERVO_ANGLE:")) {
+    int angulo = cmd.substring(12).toInt();
+    angulo = constrain(angulo, 0, 180);
+    miServo.write(angulo);
+    BTSerial.print(F("SENS:SERVO:STATE:"));
+    BTSerial.println(angulo);
+    Serial.print(F("Servomotor ajustado por Slider a: "));
+    Serial.println(angulo);
+  }
+  // Orden: Ping de verificación de estabilidad inalámbrica (Criterio 2.1.4.8)
+  else if (cmd.startsWith("PING:")) {
+    String seq = cmd.substring(5);
+    BTSerial.print(F("SENS:PONG:"));
+    BTSerial.println(seq);
+  }
 }
 
 // Procesa cada dígito del PIN
