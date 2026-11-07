@@ -1,10 +1,7 @@
-# Proyecto Cajero Automatico Seguro IoT - Unidad 2
+# Cajero Automatico Seguro IoT
 
-Estudiante: Sophia Caro  
-Asignatura: TI3042 - Internet of Things y Smart Devices  
-Evaluacion: Evaluacion Formativa 2  
-Modalidad: Individual  
-Sede: INACAP  
+Sophia Caro  
+Seccion: IEI-N4-C1  
 
 ---
 
@@ -43,7 +40,7 @@ La aplicacion permite recibir en tiempo real los datos de los sensores (tarjetas
 
 ## Conexiones del circuito Arduino
 
-El codigo del microcontrolador se encuentra en la carpeta `arduino/CajeroSeguroIoT_Bluetooth.ino`.
+El codigo del microcontrolador se encuentra en la carpeta arduino/CajeroSeguroIoT_Bluetooth.ino.
 
 - Modulo Bluetooth HC-05: pines A0 (TX) y A1 (RX) utilizando SoftwareSerial a 9600 baudios.
 - Lector RFID RC522: conectado a los pines del bus SPI (pin 10 SDA, pin 13 SCK, pin 11 MOSI, pin 12 MISO, pin 9 RST).
@@ -56,14 +53,14 @@ El codigo del microcontrolador se encuentra en la carpeta `arduino/CajeroSeguroI
 ## Instrucciones para ejecutar el proyecto
 
 1. Parte Arduino:
-   - Abrir el archivo `arduino/CajeroSeguroIoT_Bluetooth.ino` en Arduino IDE.
+   - Abrir el archivo arduino/CajeroSeguroIoT_Bluetooth.ino en Arduino IDE.
    - Seleccionar la placa Arduino Uno y el puerto COM correspondiente.
    - Cargar el programa a la placa (desconectar los cables RX/TX del HC-05 al momento de cargar si comparten pines de programacion).
 
 2. Parte Android:
-   - Abrir la carpeta `CajeroSeguroIoT` en Android Studio.
+   - Abrir la carpeta CajeroSeguroIoT en Android Studio.
    - Esperar a que sincronice Gradle y presionar "Run app" (Shift + F10) en un emulador o celular Android.
-   - O bien instalar directamente el archivo ejecutable `CajeroSeguroIoT.apk`.
+   - O bien instalar directamente el archivo ejecutable CajeroSeguroIoT.apk.
 
 3. Prueba con hardware:
    - Encender el circuito del Arduino.
