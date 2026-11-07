@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
+import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -23,7 +24,11 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var btManager: BluetoothConnectionManager
 
-    // Registro de permisos dinámicos para Bluetooth en Android 12+ y anteriores
+    companion object {
+        val isLoggedInState = mutableStateOf(false)
+        val activeTabIndex = mutableIntStateOf(0)
+    }
+
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
@@ -41,6 +46,7 @@ class MainActivity : ComponentActivity() {
         btManager = BluetoothConnectionManager(this)
 
         checkAndRequestPermissions()
+        applyIntentExtras(intent)
 
         setContent {
             CajeroSeguroTheme {
@@ -48,7 +54,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    var isLoggedIn by remember { mutableStateOf(false) }
+                    val isLoggedIn = isLoggedInState.value
                     var loggedUser by remember { mutableStateOf("Sophia Caro") }
 
                     if (!isLoggedIn) {
@@ -57,7 +63,7 @@ class MainActivity : ComponentActivity() {
                             btManager = btManager,
                             onLoginSuccess = { user, role ->
                                 loggedUser = user
-                                isLoggedIn = true
+                                isLoggedInState.value = true
                             }
                         )
                     } else {
@@ -67,13 +73,32 @@ class MainActivity : ComponentActivity() {
                             currentUser = loggedUser,
                             onRequestPermissions = { checkAndRequestPermissions() },
                             onLogout = {
-                                isLoggedIn = false
+                                isLoggedInState.value = false
                                 btManager.disconnect()
                             }
                         )
                     }
                 }
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        applyIntentExtras(intent)
+    }
+
+    private fun applyIntentExtras(intent: Intent?) {
+        if (intent == null) return
+        if (intent.hasExtra("IS_LOGGED_IN")) {
+            isLoggedInState.value = intent.getBooleanExtra("IS_LOGGED_IN", false)
+        }
+        if (intent.hasExtra("TAB_INDEX")) {
+            activeTabIndex.intValue = intent.getIntExtra("TAB_INDEX", 0)
+        }
+        if (intent.getBooleanExtra("AUTO_SIM", false)) {
+            btManager.startSimulatorMode()
         }
     }
 
@@ -115,7 +140,7 @@ fun AppMainLayout(
     onRequestPermissions: () -> Unit,
     onLogout: () -> Unit
 ) {
-    var selectedTabIndex by remember { mutableIntStateOf(0) }
+    val selectedTabIndex = MainActivity.activeTabIndex
     val tabTitles = listOf("Conexión", "Monitoreo", "Activador", "Interconexión", "Seguridad")
 
     Scaffold(
@@ -157,20 +182,20 @@ fun AppMainLayout(
         ) {
             // Pestañas de navegación con scroll horizontal para soportar 5 pestañas completas
             PrimaryScrollableTabRow(
-                selectedTabIndex = selectedTabIndex,
+                selectedTabIndex = selectedTabIndex.intValue,
                 edgePadding = 8.dp
             ) {
                 tabTitles.forEachIndexed { index, title ->
                     Tab(
-                        selected = selectedTabIndex == index,
-                        onClick = { selectedTabIndex = index },
+                        selected = selectedTabIndex.intValue == index,
+                        onClick = { selectedTabIndex.intValue = index },
                         text = { Text(title) }
                     )
                 }
             }
 
             Box(modifier = Modifier.fillMaxSize()) {
-                when (selectedTabIndex) {
+                when (selectedTabIndex.intValue) {
                     0 -> ConnectionScreen(btManager, onRequestPermissions)
                     1 -> SensorReadingScreen(btManager)
                     2 -> ActuatorWritingScreen(btManager)
