@@ -295,10 +295,19 @@ fun SensorReadingScreen(btManager: BluetoothConnectionManager) {
             }
         }
 
-        // Panel de simulación interactiva si está en Modo Simulación
+        // Panel de simulación interactiva en la pantalla de Monitoreo
         if (status == ConnectionStatus.CONNECTED_SIMULATOR) {
             Spacer(modifier = Modifier.height(16.dp))
             SimulatorHardwareCard(btManager)
+        } else {
+            Spacer(modifier = Modifier.height(16.dp))
+            OutlinedButton(
+                onClick = { btManager.startSimulatorMode() },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Text("Activar Simulación de Sensores (Tarjeta y Teclado)")
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))

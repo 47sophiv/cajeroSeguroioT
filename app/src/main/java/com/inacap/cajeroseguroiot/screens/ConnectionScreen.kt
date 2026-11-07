@@ -130,12 +130,6 @@ fun ConnectionScreen(
             }
         }
 
-        // Si está en Modo Simulación, mostrar panel interactivo para insertar tarjeta y usar teclado
-        if (status == ConnectionStatus.CONNECTED_SIMULATOR) {
-            Spacer(modifier = Modifier.height(16.dp))
-            SimulatorHardwareCard(btManager)
-        }
-
         Spacer(modifier = Modifier.height(20.dp))
 
         // Sección de dispositivos vinculados (HC-05 / HC-06)
